@@ -307,9 +307,8 @@ function App() {
       return `${s.name} (${s.bn})${s.hasSlider ? ` - Level: ${spiceCabinet[s.id].level}` : ''}`;
     });
 
-    if (useMockMode || !apiKey) {
-      // Simulate API latency
-      await new Promise(resolve => setTimeout(resolve, 2200));
+    const runMockRecipes = async () => {
+      await new Promise(resolve => setTimeout(resolve, 1500));
       const mockResult = getMockRecipes(
         proteinDetails,
         vegDetails,
@@ -319,6 +318,10 @@ function App() {
       setRecipes(mockResult.recipes);
       setActiveRecipeIndex(0);
       setLoading(false);
+    };
+
+    if (useMockMode) {
+      await runMockRecipes();
       return;
     }
 
@@ -370,42 +373,96 @@ Preferences:
 
 Suggest 2 to 3 Bengali recipes that match these. Optimize to use as many of my ingredients as possible. If some ingredients are missing but highly common or can be bought, list them in "ingredients_missing". Make sure the instructions are extremely easy to follow step-by-step and have authentic Bengali flavors.`;
 
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.7,
-        })
-      });
+    if (apiKey) {
+      // Direct client-side fetch (with API key)
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.7,
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
 
-      const data = await response.json();
-      const parsedData = JSON.parse(data.choices[0].message.content);
-      
-      if (parsedData.recipes && parsedData.recipes.length > 0) {
-        setRecipes(parsedData.recipes);
-        setActiveRecipeIndex(0);
-      } else {
-        throw new Error("No recipes returned in the JSON response.");
+        const data = await response.json();
+        const parsedData = JSON.parse(data.choices[0].message.content);
+        
+        if (parsedData.recipes && parsedData.recipes.length > 0) {
+          setRecipes(parsedData.recipes);
+          setActiveRecipeIndex(0);
+        } else {
+          throw new Error("No recipes returned in the JSON response.");
+        }
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Failed to load recipes. Please verify your API key or connection.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Failed to load recipes. Please verify your API key or connection.");
-    } finally {
-      setLoading(false);
+    } else {
+      // Vercel Serverless Proxy fetch (without API key on client)
+      try {
+        const response = await fetch("/api/suggest", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt }
+            ]
+          })
+        });
+
+        if (response.status === 404) {
+          // If serverless is not hosted (like GitHub Pages or local preview without vercel dev)
+          console.warn("Serverless API endpoints not found. Falling back to Demo Mode.");
+          await runMockRecipes();
+          return;
+        }
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Server Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const parsedData = JSON.parse(data.choices[0].message.content);
+        
+        if (parsedData.recipes && parsedData.recipes.length > 0) {
+          setRecipes(parsedData.recipes);
+          setActiveRecipeIndex(0);
+        } else {
+          throw new Error("No recipes returned in the JSON response.");
+        }
+      } catch (err) {
+        console.error("Vercel Serverless proxy error:", err);
+        if (err.message.includes("not configured")) {
+          setError(lang === 'bn' 
+            ? "সার্ভারে Groq API Key সেট করা নেই। আপনার Vercel প্রজেক্ট সেটিংসে গিয়ে GROQ_API_KEY এনভায়রনমেন্ট ভেরিয়েবল যোগ করুন।" 
+            : "Serverless Groq API Key not configured. Please add the GROQ_API_KEY environment variable in your Vercel Project settings.");
+        } else {
+          console.warn("Falling back to local mock recipes.");
+          await runMockRecipes();
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -420,7 +477,7 @@ Suggest 2 to 3 Bengali recipes that match these. Optimize to use as many of my i
     setChatInput('');
     setChatLoading(true);
 
-    if (useMockMode || !apiKey) {
+    const runMockChat = async () => {
       // Simulate Mock Chat Response
       await new Promise(resolve => setTimeout(resolve, 1000));
       let mockReply = '';
@@ -442,6 +499,10 @@ Suggest 2 to 3 Bengali recipes that match these. Optimize to use as many of my i
 
       setChatMessages(prev => [...prev, { sender: 'assistant', text: mockReply }]);
       setChatLoading(false);
+    };
+
+    if (useMockMode) {
+      await runMockChat();
       return;
     }
 
@@ -457,35 +518,71 @@ User asks: "${userMsg}"
 
 Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer in Bengali if they ask in Bengali, or English if they ask in English. Try to suggest simple replacements or tips.`;
 
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            { role: "system", content: "You are Chef Rannaghor. Speak directly, concisely, and warmly. No markdown metadata." },
-            { role: "user", content: chatPrompt }
-          ],
-          temperature: 0.7,
-        })
-      });
+    if (apiKey) {
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: "You are Chef Rannaghor. Speak directly, concisely, and warmly. No markdown metadata." },
+              { role: "user", content: chatPrompt }
+            ],
+            temperature: 0.7,
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error("Chat assistant error");
+        if (!response.ok) {
+          throw new Error("Chat assistant error");
+        }
+
+        const data = await response.json();
+        const chefReply = data.choices[0].message.content.trim();
+        setChatMessages(prev => [...prev, { sender: 'assistant', text: chefReply }]);
+      } catch (err) {
+        console.error(err);
+        setChatMessages(prev => [...prev, { sender: 'assistant', text: lang === 'bn' ? "দুঃখিত, সংযোগে সমস্যা হয়েছে।" : "Sorry, I had trouble processing that request." }]);
+      } finally {
+        setChatLoading(false);
       }
+    } else {
+      // Vercel Serverless proxy chat
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              { role: "system", content: "You are Chef Rannaghor. Speak directly, concisely, and warmly. No markdown metadata." },
+              { role: "user", content: chatPrompt }
+            ]
+          })
+        });
 
-      const data = await response.json();
-      const chefReply = data.choices[0].message.content.trim();
-      setChatMessages(prev => [...prev, { sender: 'assistant', text: chefReply }]);
-    } catch (err) {
-      console.error(err);
-      setChatMessages(prev => [...prev, { sender: 'assistant', text: lang === 'bn' ? "দুঃখিত, সংযোগে সমস্যা হয়েছে।" : "Sorry, I had trouble processing that request." }]);
-    } finally {
-      setChatLoading(false);
+        if (response.status === 404) {
+          console.warn("Serverless chat endpoint not found. Falling back to mock.");
+          await runMockChat();
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Chat proxy error");
+        }
+
+        const data = await response.json();
+        const chefReply = data.choices[0].message.content.trim();
+        setChatMessages(prev => [...prev, { sender: 'assistant', text: chefReply }]);
+      } catch (err) {
+        console.error("Vercel proxy chat error:", err);
+        await runMockChat();
+      }
     }
   };
 
