@@ -144,7 +144,10 @@ function App() {
   // Config state
   const [lang, setLang] = useState('bn'); // Defaulting to Bengali
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('rannaghor_api_key') || '');
-  const [model, setModel] = useState(() => localStorage.getItem('rannaghor_model') || 'llama-3.3-70b-versatile');
+  const [model, setModel] = useState(() => {
+    const stored = localStorage.getItem('rannaghor_model');
+    return (!stored || stored === 'llama-3.3-70b-specdec') ? 'llama-3.3-70b-versatile' : stored;
+  });
   const [useMockMode, setUseMockMode] = useState(() => !localStorage.getItem('rannaghor_api_key'));
   const [settingsOpen, setSettingsOpen] = useState(false);
 
