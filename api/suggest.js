@@ -16,7 +16,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+  let apiKey = authHeader ? authHeader.replace('Bearer ', '').trim() : '';
+  if (!apiKey) {
+    apiKey = process.env.GROQ_API_KEY;
+  }
   if (!apiKey) {
     return res.status(500).json({ error: 'Groq API Key not configured on Vercel environment' });
   }
