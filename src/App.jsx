@@ -144,7 +144,7 @@ function App() {
   // Config state
   const [lang, setLang] = useState('bn'); // Defaulting to Bengali
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('rannaghor_api_key') || '');
-  const [model, setModel] = useState(() => localStorage.getItem('rannaghor_model') || 'llama-3.3-70b-specdec');
+  const [model, setModel] = useState(() => localStorage.getItem('rannaghor_model') || 'llama-3.3-70b-versatile');
   const [useMockMode, setUseMockMode] = useState(() => !localStorage.getItem('rannaghor_api_key'));
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -1173,9 +1173,10 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
             <div className="form-group">
               <label className="form-label">{t.model}</label>
               <select className="form-input" id="model-select" defaultValue={model}>
-                <option value="llama-3.3-70b-specdec">Llama 3.3 70B SpecDec (Recommended)</option>
+                <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Recommended)</option>
+                <option value="llama-3.3-70b-specdec">Llama 3.3 70B SpecDec (Fast)</option>
                 <option value="gemma2-9b-it">Gemma 2 9B IT (Great Bengali capability)</option>
-                <option value="llama3-8b-8192">Llama 3 8B (Super Fast)</option>
+                <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Super Fast)</option>
                 <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
               </select>
             </div>
@@ -1199,7 +1200,7 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
                 const keyVal = document.getElementById('api-key-input').value.trim();
                 const modelVal = document.getElementById('model-select').value;
                 const isMockVal = document.getElementById('mock-mode-check').checked;
-                saveSettings(keyVal, modelVal, isMockVal || !keyVal);
+                saveSettings(keyVal, modelVal, isMockVal);
               }}
             >
               {t.saveBtn}

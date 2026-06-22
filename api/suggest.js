@@ -21,7 +21,16 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Groq API Key not configured on Vercel environment' });
   }
 
-  const { model, messages } = req.body;
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+  }
+
+  const { model, messages } = body || {};
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -31,7 +40,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: model || 'llama-3.3-70b-specdec',
+        model: model || 'llama-3.3-70b-versatile',
         messages: messages,
         response_format: { type: "json_object" },
         temperature: 0.7,
