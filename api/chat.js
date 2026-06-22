@@ -35,6 +35,10 @@ export default async function handler(req, res) {
   }
 
   const { model, messages } = body || {};
+  let targetModel = model;
+  if (!targetModel || targetModel === 'llama-3.3-70b-specdec') {
+    targetModel = 'llama-3.3-70b-versatile';
+  }
 
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -44,7 +48,7 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: model || 'llama-3.3-70b-versatile',
+        model: targetModel,
         messages: messages,
         temperature: 0.7,
       })
