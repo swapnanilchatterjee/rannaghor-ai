@@ -1326,105 +1326,9 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Right Hand Column: Spices Cabinet and Style Preferences */}
-        <div className="pantry-sidebar">
-          
-          {/* Spices Drawer Shelf */}
-          <div className="pantry-card animate-fade" style={{ animationDelay: '0.15s' }}>
-            <h2 className={`pantry-card-title spices ${lang === 'bn' ? 'bengali-text' : ''}`}>
-              <Sliders size={20} />
-              {t.spices}
-            </h2>
-            <div className="spices-shelf">
-              {[...SPICES, ...addedSpices].map(s => {
-                const state = spiceCabinet[s.id] || { active: false, level: 'medium' };
-                return (
-                  <div key={s.id} className={`spice-row ${state.active ? 'has-spice' : ''}`}>
-                    <div className="spice-info" onClick={() => handleSpiceToggle(s.id)} style={{ cursor: 'pointer' }}>
-                      <span className="spice-icon">{s.icon}</span>
-                      <div className="spice-names">
-                        <span className="spice-name">{s.name}</span>
-                        <span className="spice-bengali bengali-text">{s.bn}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="spice-controls">
-                      {state.active && (
-                        <div className="spice-qty-wrapper" onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                          <input 
-                            type="number" 
-                            min="0.1" 
-                            step="any"
-                            className="spice-qty-input" 
-                            value={ingredientQuantities[s.id]?.qty || 2} 
-                            onChange={e => handleQuantityChange(s.id, parseFloat(e.target.value) || 0)} 
-                          />
-                          <select 
-                            className="spice-unit-select"
-                            value={ingredientQuantities[s.id]?.unit || 'tbsp'}
-                            onChange={e => handleUnitChange(s.id, e.target.value)}
-                          >
-                            <option value="g">g</option>
-                            <option value="kg">kg</option>
-                            <option value="tsp">tsp</option>
-                            <option value="tbsp">tbsp</option>
-                            <option value="cup">cup</option>
-                            <option value="pcs">pcs</option>
-                          </select>
-                        </div>
-                      )}
-
-                      <button 
-                        className={`spice-toggle-switch ${state.active ? 'active' : ''}`}
-                        onClick={() => handleSpiceToggle(s.id)}
-                      >
-                        {state.active ? (lang === 'bn' ? 'আছে' : 'Have') : (lang === 'bn' ? 'নেই' : 'None')}
-                      </button>
-                      
-                      {state.active && s.hasSlider && (
-                        <select 
-                          className="spice-level-select"
-                          value={state.level}
-                          onChange={(e) => handleSpiceLevelChange(s.id, e.target.value)}
-                        >
-                          <option value="low">{lang === 'bn' ? 'অল্প' : 'A Little'}</option>
-                          <option value="medium">{lang === 'bn' ? 'মাঝারি' : 'Medium'}</option>
-                          <option value="high">{lang === 'bn' ? 'বেশি' : 'Plenty'}</option>
-                        </select>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Custom Spice addition */}
-            <div className="category-custom-add" onClick={e => e.stopPropagation()} style={{ marginTop: '1.25rem' }}>
-              <form 
-                onSubmit={e => {
-                  e.preventDefault();
-                  handleAddCustomItem('spice');
-                }} 
-                className="custom-add-row"
-              >
-                <input 
-                  type="text" 
-                  className="custom-add-input"
-                  placeholder={lang === 'bn' ? "নতুন মশলা/উপাদান..." : "Add custom pantry..."}
-                  value={customInputs.spice || ''}
-                  onChange={e => setCustomInputs(prev => ({ ...prev, spice: e.target.value }))}
-                />
-                <button type="submit" className="btn btn-primary custom-add-btn">
-                  <Plus size={14} />
-                </button>
-              </form>
-            </div>
-          </div>
 
           {/* User preferences */}
-          <div className="pantry-card animate-fade" style={{ animationDelay: '0.25s' }}>
+          <div className="pantry-card animate-fade" style={{ animationDelay: '0.2s' }}>
             <h2 className={`pantry-card-title preferences ${lang === 'bn' ? 'bengali-text' : ''}`}>
               <Sliders size={20} />
               {t.preferences}
@@ -1563,6 +1467,104 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Right Hand Column: Spices Cabinet and Style Preferences */}
+        <div className="pantry-sidebar">
+          
+          {/* Spices Drawer Shelf */}
+          <div className="pantry-card animate-fade" style={{ animationDelay: '0.15s' }}>
+            <h2 className={`pantry-card-title spices ${lang === 'bn' ? 'bengali-text' : ''}`}>
+              <Sliders size={20} />
+              {t.spices}
+            </h2>
+            <div className="spices-shelf">
+              {[...SPICES, ...addedSpices].map(s => {
+                const state = spiceCabinet[s.id] || { active: false, level: 'medium' };
+                return (
+                  <div key={s.id} className={`spice-row ${state.active ? 'has-spice' : ''}`}>
+                    <div className="spice-info" onClick={() => handleSpiceToggle(s.id)} style={{ cursor: 'pointer' }}>
+                      <span className="spice-icon">{s.icon}</span>
+                      <div className="spice-names">
+                        <span className="spice-name">{s.name}</span>
+                        <span className="spice-bengali bengali-text">{s.bn}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="spice-controls">
+                      {state.active && (
+                        <div className="spice-qty-wrapper" onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                          <input 
+                            type="number" 
+                            min="0.1" 
+                            step="any"
+                            className="spice-qty-input" 
+                            value={ingredientQuantities[s.id]?.qty || 2} 
+                            onChange={e => handleQuantityChange(s.id, parseFloat(e.target.value) || 0)} 
+                          />
+                          <select 
+                            className="spice-unit-select"
+                            value={ingredientQuantities[s.id]?.unit || 'tbsp'}
+                            onChange={e => handleUnitChange(s.id, e.target.value)}
+                          >
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="tsp">tsp</option>
+                            <option value="tbsp">tbsp</option>
+                            <option value="cup">cup</option>
+                            <option value="pcs">pcs</option>
+                          </select>
+                        </div>
+                      )}
+
+                      <button 
+                        className={`spice-toggle-switch ${state.active ? 'active' : ''}`}
+                        onClick={() => handleSpiceToggle(s.id)}
+                      >
+                        {state.active ? (lang === 'bn' ? 'আছে' : 'Have') : (lang === 'bn' ? 'নেই' : 'None')}
+                      </button>
+                      
+                      {state.active && s.hasSlider && (
+                        <select 
+                          className="spice-level-select"
+                          value={state.level}
+                          onChange={(e) => handleSpiceLevelChange(s.id, e.target.value)}
+                        >
+                          <option value="low">{lang === 'bn' ? 'অল্প' : 'A Little'}</option>
+                          <option value="medium">{lang === 'bn' ? 'মাঝারি' : 'Medium'}</option>
+                          <option value="high">{lang === 'bn' ? 'বেশি' : 'Plenty'}</option>
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Custom Spice addition */}
+            <div className="category-custom-add" onClick={e => e.stopPropagation()} style={{ marginTop: '1.25rem' }}>
+              <form 
+                onSubmit={e => {
+                  e.preventDefault();
+                  handleAddCustomItem('spice');
+                }} 
+                className="custom-add-row"
+              >
+                <input 
+                  type="text" 
+                  className="custom-add-input"
+                  placeholder={lang === 'bn' ? "নতুন মশলা/উপাদান..." : "Add custom pantry..."}
+                  value={customInputs.spice || ''}
+                  onChange={e => setCustomInputs(prev => ({ ...prev, spice: e.target.value }))}
+                />
+                <button type="submit" className="btn btn-primary custom-add-btn">
+                  <Plus size={14} />
+                </button>
+              </form>
+            </div>
+          </div>
+
+
         </div>
       </div>
 
