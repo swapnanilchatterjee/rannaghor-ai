@@ -4,7 +4,6 @@ import {
   ChefHat, 
   Sliders, 
   Search, 
-  Plus, 
   X, 
   Volume2, 
   VolumeX, 
@@ -184,7 +183,6 @@ function App() {
 
   // Audio / TTS state
   const [speaking, setSpeaking] = useState(false);
-  const speechRef = useRef(null);
 
   // Chatbot state
   const [chatMessages, setChatMessages] = useState([]);
@@ -207,10 +205,6 @@ function App() {
       }
     };
   }, []);
-
-  const toggleLanguage = () => {
-    setLang(prev => prev === 'en' ? 'bn' : 'en');
-  };
 
   const handleProteinToggle = (id) => {
     setSelectedProteins(prev => 

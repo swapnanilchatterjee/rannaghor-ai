@@ -1,3 +1,4 @@
+/* eslint-disable no-undef, no-unused-vars */
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', true);
