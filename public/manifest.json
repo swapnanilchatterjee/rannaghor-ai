@@ -1,0 +1,16 @@
+{
+  "short_name": "Rannaghor AI",
+  "name": "Rannaghor AI - Bengali Cooking Suggestor",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#121212",
+  "theme_color": "#b33939",
+  "display": "standalone",
+  "orientation": "portrait"
+}

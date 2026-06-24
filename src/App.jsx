@@ -22,7 +22,8 @@ import {
   Pause,
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Heart
 } from 'lucide-react';
 import './App.css';
 import { PROTEINS, VEGETABLES, SPICES, COOKING_QUOTES } from './data/ingredients';
@@ -239,12 +240,18 @@ function App() {
   const [voiceCommandsActive, setVoiceCommandsActive] = useState(false);
   const [checkedMissingIngredients, setCheckedMissingIngredients] = useState([]);
   const [toastMessage, setToastMessage] = useState(null);
+  const [favorites, setFavorites] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_favorites');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [resultsTab, setResultsTab] = useState('suggested');
 
   // App running states
   const [loading, setLoading] = useState(false);
   const [loadingQuote, setLoadingQuote] = useState({ en: '', bn: '' });
   const [error, setError] = useState(null);
-  const [recipes, setRecipes] = useState(null);
+  const [suggestedRecipes, setSuggestedRecipes] = useState(null);
+  const recipes = resultsTab === 'favorites' ? favorites : suggestedRecipes;
   const [activeRecipeIndex, setActiveRecipeIndex] = useState(0);
 
   // Audio / TTS state
@@ -308,6 +315,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('rannaghor_food_style', foodStyle);
   }, [foodStyle]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_favorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   // Toast message timeout helper
   useEffect(() => {
@@ -483,7 +494,8 @@ function App() {
   const handleSuggestRecipes = async () => {
     setLoading(true);
     setError(null);
-    setRecipes(null);
+    setResultsTab('suggested');
+    setSuggestedRecipes(null);
     setChatMessages([]);
     
     // Cancel speaking if active
@@ -537,7 +549,7 @@ function App() {
         })),
         { diet, spiceLevel, mealType, timeLimit, lang, foodStyle }
       );
-      setRecipes(mockResult.recipes);
+      setSuggestedRecipes(mockResult.recipes);
       setActiveRecipeIndex(0);
       setLoading(false);
     };
@@ -611,6 +623,7 @@ Suggest 2 to 3 Bengali recipes that match these. Optimize to use as many of my i
         headers: headers,
         body: JSON.stringify({
           model: model,
+          response_format: { type: "json_object" },
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
@@ -634,7 +647,7 @@ Suggest 2 to 3 Bengali recipes that match these. Optimize to use as many of my i
       const parsedData = JSON.parse(data.choices[0].message.content);
       
       if (parsedData.recipes && parsedData.recipes.length > 0) {
-        setRecipes(parsedData.recipes);
+        setSuggestedRecipes(parsedData.recipes);
         setActiveRecipeIndex(0);
       } else {
         throw new Error("No recipes returned in the JSON response.");
@@ -1018,6 +1031,20 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
     setCheckedMissingIngredients(prev => 
       prev.includes(itemText) ? prev.filter(x => x !== itemText) : [...prev, itemText]
     );
+  };
+
+  const handleToggleFavorite = (recipe) => {
+    if (!recipe) return;
+    setFavorites(prev => {
+      const exists = prev.some(r => r.name_en === recipe.name_en);
+      if (exists) {
+        setToastMessage(lang === 'bn' ? "❤️ ফেভারিট থেকে বাদ দেওয়া হয়েছে" : "❤️ Removed from Favorites");
+        return prev.filter(r => r.name_en !== recipe.name_en);
+      } else {
+        setToastMessage(lang === 'bn' ? "❤️ ফেভারিটে যোগ করা হয়েছে!" : "❤️ Added to Favorites!");
+        return [...prev, recipe];
+      }
+    });
   };
 
   const getShoppingListText = () => {
@@ -1588,38 +1615,114 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
           <div className="results-layout">
             {/* Sidebar list of recipes */}
             <div className="recipes-sidebar">
-              {recipes.map((recipe, index) => (
-                <div 
-                  key={index} 
-                  className={`recipe-tab-card ${activeRecipeIndex === index ? 'active' : ''}`}
+              <div className="results-tabs-header">
+                <button 
+                  className={`results-tab-btn ${resultsTab === 'suggested' ? 'active' : ''}`}
                   onClick={() => {
-                    setActiveRecipeIndex(index);
+                    setResultsTab('suggested');
+                    setActiveRecipeIndex(0);
                     setChatMessages([]);
                     if (window.speechSynthesis) window.speechSynthesis.cancel();
                     setSpeaking(false);
                   }}
                 >
-                  <div className="tab-card-title">
-                    <span>{recipe.name_en}</span>
-                    <span className="meta-badge">{recipe.difficulty}</span>
+                  {lang === 'bn' ? 'সুপারিশ' : 'Suggested'}
+                </button>
+                <button 
+                  className={`results-tab-btn ${resultsTab === 'favorites' ? 'active' : ''}`}
+                  onClick={() => {
+                    setResultsTab('favorites');
+                    setActiveRecipeIndex(0);
+                    setChatMessages([]);
+                    if (window.speechSynthesis) window.speechSynthesis.cancel();
+                    setSpeaking(false);
+                  }}
+                >
+                  {lang === 'bn' ? 'সংরক্ষিত ❤️' : 'Saved ❤️'}
+                </button>
+              </div>
+
+              {resultsTab === 'suggested' ? (
+                recipes.map((recipe, index) => (
+                  <div 
+                    key={index} 
+                    className={`recipe-tab-card ${activeRecipeIndex === index ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveRecipeIndex(index);
+                      setChatMessages([]);
+                      if (window.speechSynthesis) window.speechSynthesis.cancel();
+                      setSpeaking(false);
+                    }}
+                  >
+                    <div className="tab-card-title">
+                      <span>{recipe.name_en}</span>
+                      <span className="meta-badge">{recipe.difficulty}</span>
+                    </div>
+                    <div className="tab-card-bengali bengali-text">{recipe.name_bn}</div>
+                    <p className="tab-card-desc">
+                      {lang === 'bn' ? recipe.description_bn : recipe.description_en}
+                    </p>
+                    <div className="tab-card-meta">
+                      <span className="meta-badge">{recipe.prep_time} prep</span>
+                      <span className="meta-badge">{recipe.cook_time} cook</span>
+                    </div>
                   </div>
-                  <div className="tab-card-bengali bengali-text">{recipe.name_bn}</div>
-                  <p className="tab-card-desc">
-                    {lang === 'bn' ? recipe.description_bn : recipe.description_en}
-                  </p>
-                  <div className="tab-card-meta">
-                    <span className="meta-badge">{recipe.prep_time} prep</span>
-                    <span className="meta-badge">{recipe.cook_time} cook</span>
+                ))
+              ) : (
+                favorites.length === 0 ? (
+                  <div className="favorites-empty-placeholder">
+                    <Heart size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+                    <p style={{ fontWeight: 'bold' }}>{lang === 'bn' ? 'কোনো রেসিপি সংরক্ষিত নেই।' : 'No saved recipes yet.'}</p>
+                    <p style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: '0.25rem', lineHeight: '1.4' }}>
+                      {lang === 'bn' ? 'রেসিপির ওপর হার্ট বাটনে ক্লিক করে পছন্দসমূহ জমিয়ে রাখুন!' : 'Click the heart button on recipes to save them here!'}
+                    </p>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  favorites.map((recipe, index) => (
+                    <div 
+                      key={index} 
+                      className={`recipe-tab-card ${activeRecipeIndex === index ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveRecipeIndex(index);
+                        setChatMessages([]);
+                        if (window.speechSynthesis) window.speechSynthesis.cancel();
+                        setSpeaking(false);
+                      }}
+                    >
+                      <div className="tab-card-title">
+                        <span>{recipe.name_en}</span>
+                        <span className="meta-badge">{recipe.difficulty}</span>
+                      </div>
+                      <div className="tab-card-bengali bengali-text">{recipe.name_bn}</div>
+                      <p className="tab-card-desc">
+                        {lang === 'bn' ? recipe.description_bn : recipe.description_en}
+                      </p>
+                      <div className="tab-card-meta">
+                        <span className="meta-badge">{recipe.prep_time} prep</span>
+                        <span className="meta-badge">{recipe.cook_time} cook</span>
+                      </div>
+                    </div>
+                  ))
+                )
+              )}
             </div>
 
             {/* Active recipe full detail display */}
             <div className="active-recipe-view">
               <div className="recipe-title-wrapper">
-                <h2 className="recipe-title-en">{recipes[activeRecipeIndex].name_en}</h2>
-                <h3 className="recipe-title-bn bengali-text">{recipes[activeRecipeIndex].name_bn}</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                  <div>
+                    <h2 className="recipe-title-en">{recipes[activeRecipeIndex].name_en}</h2>
+                    <h3 className="recipe-title-bn bengali-text">{recipes[activeRecipeIndex].name_bn}</h3>
+                  </div>
+                  <button 
+                    className={`favorite-toggle-btn ${favorites.some(r => r.name_en === recipes[activeRecipeIndex].name_en) ? 'is-fav' : ''}`}
+                    onClick={() => handleToggleFavorite(recipes[activeRecipeIndex])}
+                    title={lang === 'bn' ? 'ফেভারিট সংরক্ষণ করুন' : 'Bookmark to Favorites'}
+                  >
+                    <Heart size={20} fill={favorites.some(r => r.name_en === recipes[activeRecipeIndex].name_en) ? "var(--primary)" : "none"} color={favorites.some(r => r.name_en === recipes[activeRecipeIndex].name_en) ? "var(--primary)" : "currentColor"} />
+                  </button>
+                </div>
                 
                 {/* Stats */}
                 <div className="recipe-quick-stats">
