@@ -15,7 +15,14 @@ import {
   Flame, 
   Clock, 
   Sparkles,
-  Info
+  Info,
+  Mic,
+  MicOff,
+  Play,
+  Pause,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import './App.css';
 import { PROTEINS, VEGETABLES, SPICES, COOKING_QUOTES } from './data/ingredients';
@@ -158,7 +165,7 @@ const TRANSLATIONS = {
 
 function App() {
   // Config state
-  const [lang, setLang] = useState('bn'); // Defaulting to Bengali
+  const [lang, setLang] = useState(() => localStorage.getItem('rannaghor_lang') || 'bn');
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('rannaghor_api_key') || '');
   const [model, setModel] = useState(() => {
     const stored = localStorage.getItem('rannaghor_model');
@@ -171,9 +178,17 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Pantry & Ingredients state
-  const [selectedProteins, setSelectedProteins] = useState([]);
-  const [selectedVegetables, setSelectedVegetables] = useState([]);
+  const [selectedProteins, setSelectedProteins] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_selected_proteins');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedVegetables, setSelectedVegetables] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_selected_vegetables');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [spiceCabinet, setSpiceCabinet] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_spice_cabinet');
+    if (saved) return JSON.parse(saved);
     const cabinet = {};
     SPICES.forEach(s => {
       cabinet[s.id] = { active: false, level: 'medium' };
@@ -186,22 +201,44 @@ function App() {
   const [veggieQuery, setVeggieQuery] = useState('');
 
   // Category specific added custom lists
-  const [addedProteins, setAddedProteins] = useState([]);
-  const [addedVegetables, setAddedVegetables] = useState([]);
-  const [addedSpices, setAddedSpices] = useState([]);
+  const [addedProteins, setAddedProteins] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_added_proteins');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [addedVegetables, setAddedVegetables] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_added_vegetables');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [addedSpices, setAddedSpices] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_added_spices');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Category specific input states
   const [customInputs, setCustomInputs] = useState({ protein: '', vegetable: '', spice: '' });
 
   // Ingredient quantities & units: maps ingredientId -> { qty: number, unit: string }
-  const [ingredientQuantities, setIngredientQuantities] = useState({});
+  const [ingredientQuantities, setIngredientQuantities] = useState(() => {
+    const saved = localStorage.getItem('rannaghor_ingredient_quantities');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   // Preference state
-  const [diet, setDiet] = useState('any');
-  const [spiceLevel, setSpiceLevel] = useState('medium');
-  const [mealType, setMealType] = useState('lunchDinner');
-  const [timeLimit, setTimeLimit] = useState('average');
-  const [foodStyle, setFoodStyle] = useState('any');
+  const [diet, setDiet] = useState(() => localStorage.getItem('rannaghor_diet') || 'any');
+  const [spiceLevel, setSpiceLevel] = useState(() => localStorage.getItem('rannaghor_spice_level') || 'medium');
+  const [mealType, setMealType] = useState(() => localStorage.getItem('rannaghor_meal_type') || 'lunchDinner');
+  const [timeLimit, setTimeLimit] = useState(() => localStorage.getItem('rannaghor_time_limit') || 'average');
+  const [foodStyle, setFoodStyle] = useState(() => localStorage.getItem('rannaghor_food_style') || 'any');
+
+  // New advanced features states
+  const [servingsScale, setServingsScale] = useState(1);
+  const [focusMode, setFocusMode] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [timerSeconds, setTimerSeconds] = useState(null);
+  const [timerActive, setTimerActive] = useState(false);
+  const [voiceCommandsActive, setVoiceCommandsActive] = useState(false);
+  const [checkedMissingIngredients, setCheckedMissingIngredients] = useState([]);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // App running states
   const [loading, setLoading] = useState(false);
@@ -218,6 +255,67 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
+
+  // Sync state changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('rannaghor_lang', lang);
+  }, [lang]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_selected_proteins', JSON.stringify(selectedProteins));
+  }, [selectedProteins]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_selected_vegetables', JSON.stringify(selectedVegetables));
+  }, [selectedVegetables]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_spice_cabinet', JSON.stringify(spiceCabinet));
+  }, [spiceCabinet]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_added_proteins', JSON.stringify(addedProteins));
+  }, [addedProteins]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_added_vegetables', JSON.stringify(addedVegetables));
+  }, [addedVegetables]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_added_spices', JSON.stringify(addedSpices));
+  }, [addedSpices]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_ingredient_quantities', JSON.stringify(ingredientQuantities));
+  }, [ingredientQuantities]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_diet', diet);
+  }, [diet]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_spice_level', spiceLevel);
+  }, [spiceLevel]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_meal_type', mealType);
+  }, [mealType]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_time_limit', timeLimit);
+  }, [timeLimit]);
+
+  useEffect(() => {
+    localStorage.setItem('rannaghor_food_style', foodStyle);
+  }, [foodStyle]);
+
+  // Toast message timeout helper
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const t = TRANSLATIONS[lang];
 
@@ -647,6 +745,315 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
     } finally {
       setChatLoading(false);
     }
+  };
+
+  // Helper to scale numeric values in ingredient amount strings
+  const scaleAmount = (amountStr, scale) => {
+    if (scale === 1 || !amountStr) return amountStr;
+
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    const enDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+    let workStr = amountStr.toString();
+    for (let i = 0; i < 10; i++) {
+      workStr = workStr.replaceAll(bnDigits[i], enDigits[i]);
+    }
+
+    const numRegex = /\d+(\.\d+)?/g;
+    let resultStr = workStr.replace(numRegex, (match) => {
+      const val = parseFloat(match);
+      if (isNaN(val)) return match;
+      const scaledVal = parseFloat((val * scale).toFixed(2));
+      return scaledVal.toString();
+    });
+
+    if (lang === 'bn') {
+      let bnStr = resultStr;
+      for (let i = 0; i < 10; i++) {
+        bnStr = bnStr.replaceAll(enDigits[i], bnDigits[i]);
+      }
+      return bnStr;
+    }
+
+    return resultStr;
+  };
+
+  // Helper to parse minutes/hours from instructions text to seconds
+  const parseTimeLimit = (text) => {
+    if (!text) return null;
+    const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    const enDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+    let cleanText = text.toString();
+    for (let i = 0; i < 10; i++) {
+      cleanText = cleanText.replaceAll(bnDigits[i], enDigits[i]);
+    }
+
+    const minMatch = cleanText.match(/(\d+)(?:\s*-\s*(\d+))?\s*(?:minutes|minute|mins|min|মিনিট)/i);
+    if (minMatch) {
+      const minutes = minMatch[2] ? parseInt(minMatch[2]) : parseInt(minMatch[1]);
+      return minutes * 60;
+    }
+
+    const hourMatch = cleanText.match(/(\d+)(?:\s*-\s*(\d+))?\s*(?:hours|hour|ঘণ্টা|ঘণ্টা)/i);
+    if (hourMatch) {
+      const hours = hourMatch[2] ? parseInt(hourMatch[2]) : parseInt(hourMatch[1]);
+      return hours * 3600;
+    }
+
+    return null;
+  };
+
+  // Synthesize sound notifications using Web Audio API
+  const playNotificationSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.8);
+    } catch (e) {
+      console.warn("AudioContext playback blocked or failed:", e);
+    }
+  };
+
+  // Timer loop effect
+  useEffect(() => {
+    let interval = null;
+    if (timerActive && timerSeconds !== null && timerSeconds > 0) {
+      interval = setInterval(() => {
+        setTimerSeconds(s => s - 1);
+      }, 1000);
+    } else if (timerActive && timerSeconds === 0) {
+      setTimeout(() => {
+        setTimerActive(false);
+        setTimerSeconds(null);
+        setToastMessage(lang === 'bn' ? "⏰ সময় শেষ! রান্না সম্পন্ন হয়েছে!" : "⏰ Timer complete! Cooking step done!");
+      }, 0);
+      
+      playNotificationSound();
+      
+      if (window.speechSynthesis) {
+        const ttsText = lang === 'bn' 
+          ? "ধাপ সম্পন্ন হয়েছে! পরের ধাপে যান।" 
+          : "Step complete! Move to next step.";
+        const utterance = new SpeechSynthesisUtterance(ttsText);
+        utterance.lang = lang === 'bn' ? 'bn-IN' : 'en-US';
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerActive, timerSeconds, lang]);
+
+  const currentRecipeSteps = recipes && recipes[activeRecipeIndex] 
+    ? (lang === 'bn' ? recipes[activeRecipeIndex].instructions_bn : recipes[activeRecipeIndex].instructions_en) 
+    : [];
+
+  const speakStep = (idx) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    
+    const stepText = currentRecipeSteps[idx];
+    if (!stepText) return;
+    
+    const title = lang === 'bn' ? `ধাপ ${idx + 1}: ${stepText}` : `Step ${idx + 1}: ${stepText}`;
+    const utterance = new SpeechSynthesisUtterance(title);
+    utterance.lang = lang === 'bn' ? 'bn-IN' : 'en-US';
+    
+    const voices = window.speechSynthesis.getVoices();
+    const targetVoice = voices.find(v => v.lang.toLowerCase().includes(lang === 'bn' ? 'bn' : 'en'));
+    if (targetVoice) utterance.voice = targetVoice;
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const initializeTimerForStep = (idx) => {
+    const stepText = currentRecipeSteps[idx];
+    const seconds = parseTimeLimit(stepText);
+    setTimerActive(false);
+    if (seconds) {
+      setTimerSeconds(seconds);
+    } else {
+      setTimerSeconds(null);
+    }
+  };
+
+  const handleFocusNext = () => {
+    if (currentStepIndex < currentRecipeSteps.length - 1) {
+      setCurrentStepIndex(prev => {
+        const nextIdx = prev + 1;
+        speakStep(nextIdx);
+        initializeTimerForStep(nextIdx);
+        return nextIdx;
+      });
+    }
+  };
+
+  const handleFocusPrev = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(prev => {
+        const prevIdx = prev - 1;
+        speakStep(prevIdx);
+        initializeTimerForStep(prevIdx);
+        return prevIdx;
+      });
+    }
+  };
+
+  const handleSpeakCurrentStep = () => {
+    speakStep(currentStepIndex);
+  };
+
+  // Create refs for callback stability to avoid effect re-triggers and satisfy eslint rules
+  const handleFocusNextRef = useRef(handleFocusNext);
+  const handleFocusPrevRef = useRef(handleFocusPrev);
+  const handleSpeakCurrentStepRef = useRef(handleSpeakCurrentStep);
+
+  useEffect(() => {
+    handleFocusNextRef.current = handleFocusNext;
+    handleFocusPrevRef.current = handleFocusPrev;
+    handleSpeakCurrentStepRef.current = handleSpeakCurrentStep;
+  });
+
+  // Speech Recognition Voice Assistant setup
+  useEffect(() => {
+    let recognition = null;
+    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (voiceCommandsActive && SpeechRecognitionClass && focusMode) {
+      try {
+        recognition = new SpeechRecognitionClass();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = lang === 'bn' ? 'bn-IN' : 'en-US';
+
+        recognition.onresult = (event) => {
+          const result = event.results[event.results.length - 1][0].transcript.toLowerCase();
+          console.log("Voice Command Recognized:", result);
+
+          if (result.includes('next') || result.includes('পরের') || result.includes('এগিয়ে')) {
+            handleFocusNextRef.current();
+          } else if (result.includes('back') || result.includes('prev') || result.includes('আগের') || result.includes('পেছনে')) {
+             handleFocusPrevRef.current();
+          } else if (result.includes('repeat') || result.includes('again') || result.includes('আবার') || result.includes('পুনরায়')) {
+            handleSpeakCurrentStepRef.current();
+          }
+        };
+
+        recognition.onerror = (e) => {
+          console.error("Speech Recognition Error:", e);
+          if (e.error === 'no-speech' || e.error === 'network') {
+            try {
+              recognition.stop();
+            } catch (err) {
+              console.warn("Recognition stop failed:", err);
+            }
+          }
+        };
+
+        recognition.onend = () => {
+          if (voiceCommandsActive && focusMode) {
+            try {
+              recognition.start();
+            } catch (err) {
+              console.warn("Recognition restart failed:", err);
+            }
+          }
+        };
+
+        recognition.start();
+      } catch (err) {
+        console.error("Failed to start Speech Recognition:", err);
+      }
+    }
+
+    return () => {
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.warn("Cleanup recognition stop failed:", e);
+        }
+      }
+    };
+  }, [voiceCommandsActive, focusMode, lang]);
+
+  // Start Focus Mode
+  const handleStartCooking = () => {
+    if (currentRecipeSteps.length > 0) {
+      setCurrentStepIndex(0);
+      setFocusMode(true);
+      initializeTimerForStep(0);
+      speakStep(0);
+    }
+  };
+
+  const handleExitFocusMode = () => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeaking(false);
+    setTimerActive(false);
+    setFocusMode(false);
+  };
+
+  // Smart Shopping List Handlers
+  const handleToggleShoppingItem = (itemText) => {
+    setCheckedMissingIngredients(prev => 
+      prev.includes(itemText) ? prev.filter(x => x !== itemText) : [...prev, itemText]
+    );
+  };
+
+  const getShoppingListText = () => {
+    const currentRecipe = recipes[activeRecipeIndex];
+    const missing = currentRecipe.ingredients_missing || [];
+    
+    const header = lang === 'bn'
+      ? `🛒 *রান্নাঘর AI - বাজার করার তালিকা (${currentRecipe.name_bn}):*\n`
+      : `🛒 *Rannaghor AI - Shopping List for ${currentRecipe.name_en}:*\n`;
+      
+    const listLines = missing.map(ing => {
+      const isChecked = checkedMissingIngredients.includes(ing.name_en);
+      const checkMark = isChecked ? ' [x] ' : ' [ ] ';
+      const nameStr = lang === 'bn' ? ing.name_bn : ing.name_en;
+      const amtScaled = scaleAmount(ing.amount, servingsScale);
+      return `${checkMark}${nameStr}: ${amtScaled}`;
+    }).join('\n');
+    
+    return `${header}${listLines}\n\n_তৈরি করেছেন রান্নাঘর AI সহকারী_`;
+  };
+
+  const handleCopyShoppingList = () => {
+    const text = getShoppingListText();
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setToastMessage(lang === 'bn' ? "📋 তালিকা ক্লিপবোর্ডে কপি করা হয়েছে!" : "📋 Shopping list copied to clipboard!");
+      })
+      .catch(err => {
+        console.error("Failed to copy:", err);
+      });
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = getShoppingListText();
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   const filteredVegetables = [...VEGETABLES, ...addedVegetables].filter(v => 
@@ -1228,9 +1635,26 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
                     <Clock size={14} />
                     {t.cookTimeStat}: {recipes[activeRecipeIndex].cook_time}
                   </span>
-                  <span className="stat-badge">
+                  <span className="stat-badge servings-badge">
                     <Utensils size={14} />
-                    {t.servings}: {recipes[activeRecipeIndex].serving_size}
+                    {t.servings}: {scaleAmount(recipes[activeRecipeIndex].serving_size, servingsScale)}
+                    <span className="servings-multiplier-controls" style={{ marginLeft: '0.5rem', display: 'flex', gap: '0.25rem' }}>
+                      <button 
+                        className="servings-scale-btn" 
+                        onClick={() => setServingsScale(s => Math.max(0.5, s - 0.5))}
+                        style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', width: '20px', height: '20px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                      >
+                        -
+                      </button>
+                      <span style={{ fontWeight: 'bold', fontSize: '0.8rem', padding: '0 2px' }}>{servingsScale}x</span>
+                      <button 
+                        className="servings-scale-btn" 
+                        onClick={() => setServingsScale(s => Math.min(4, s + 0.5))}
+                        style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', width: '20px', height: '20px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                      >
+                        +
+                      </button>
+                    </span>
                   </span>
                   {recipes[activeRecipeIndex].calories && (
                     <span className="stat-badge calories-badge" style={{ backgroundColor: 'rgba(240, 147, 43, 0.1)', color: '#d35400', borderColor: 'rgba(240, 147, 43, 0.2)' }}>
@@ -1279,7 +1703,7 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
                     <li key={idx} className="checklist-item">
                       <span style={{ color: 'var(--accent)' }}>✓</span>
                       <span>
-                        <strong>{lang === 'bn' ? ing.name_bn : ing.name_en}</strong>: {ing.amount}
+                        <strong>{lang === 'bn' ? ing.name_bn : ing.name_en}</strong>: {scaleAmount(ing.amount, servingsScale)}
                       </span>
                     </li>
                   ))}
@@ -1290,25 +1714,57 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
                     <div className="pref-group-title" style={{ color: 'var(--primary)', marginTop: '1rem' }}>
                       {t.missingLabel}
                     </div>
-                    <ul className="ingredients-checklist">
-                      {recipes[activeRecipeIndex].ingredients_missing.map((ing, idx) => (
-                        <li key={idx} className="checklist-item" style={{ opacity: 0.8 }}>
-                          <span style={{ color: 'var(--primary)' }}>+</span>
-                          <span>
-                            <strong>{lang === 'bn' ? ing.name_bn : ing.name_en}</strong>: {ing.amount}
-                          </span>
-                        </li>
-                      ))}
+                    <ul className="ingredients-checklist missing-checklist">
+                      {recipes[activeRecipeIndex].ingredients_missing.map((ing, idx) => {
+                        const isChecked = checkedMissingIngredients.includes(ing.name_en);
+                        return (
+                          <li 
+                            key={idx} 
+                            className={`checklist-item missing-item ${isChecked ? 'checked' : ''}`}
+                            onClick={() => handleToggleShoppingItem(ing.name_en)}
+                            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: isChecked ? 0.5 : 1 }}
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked}
+                              readOnly
+                              style={{ cursor: 'pointer' }}
+                            />
+                            <span>
+                              <strong>{lang === 'bn' ? ing.name_bn : ing.name_en}</strong>: {scaleAmount(ing.amount, servingsScale)}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
+                    {/* Shopping List Actions */}
+                    <div className="shopping-list-actions" style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={handleCopyShoppingList}>
+                        {lang === 'bn' ? '📋 তালিকা কপি করুন' : '📋 Copy Shopping List'}
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={handleShareWhatsApp} style={{ backgroundColor: '#25D366', color: 'white', borderColor: '#25D366' }}>
+                        {lang === 'bn' ? '💬 ওয়াটসঅ্যাপে পাঠান' : '💬 Share on WhatsApp'}
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
 
               {/* Cooking Instructions Steps */}
-              <h3 className={`recipe-section-title ${lang === 'bn' ? 'bengali-text' : ''}`}>
-                <Utensils size={16} />
-                {t.steps}
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                <h3 className={`recipe-section-title ${lang === 'bn' ? 'bengali-text' : ''}`} style={{ margin: 0, border: 'none', padding: 0 }}>
+                  <Utensils size={16} />
+                  {t.steps}
+                </h3>
+                <button 
+                  className="btn btn-primary pulse-button" 
+                  onClick={handleStartCooking}
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                >
+                  <Sparkles size={14} />
+                  {lang === 'bn' ? 'রান্না শুরু করুন (গাইড)' : 'Start Cooking (Guide)'}
+                </button>
+              </div>
               <div className="step-by-step">
                 {(lang === 'bn' ? recipes[activeRecipeIndex].instructions_bn : recipes[activeRecipeIndex].instructions_en).map((step, idx) => (
                   <div key={idx} className="step-card">
@@ -1445,6 +1901,155 @@ Provide a warm, expert cooking advice. Keep it short (2-3 sentences max). Answer
             >
               {t.saveBtn}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step-by-step Focus Mode Modal */}
+      {focusMode && currentRecipeSteps.length > 0 && (
+        <div className="focus-mode-overlay">
+          <div className="focus-container animate-fade">
+            {/* Progress indicator */}
+            <div className="focus-progress-wrapper">
+              <div className="focus-progress-text">
+                {lang === 'bn' 
+                  ? `ধাপ ${currentStepIndex + 1} / ${currentRecipeSteps.length}` 
+                  : `Step ${currentStepIndex + 1} of ${currentRecipeSteps.length}`}
+              </div>
+              <div className="focus-progress-bar">
+                <div 
+                  className="focus-progress-fill" 
+                  style={{ width: `${((currentStepIndex + 1) / currentRecipeSteps.length) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div className="focus-card">
+              {/* Header inside Card */}
+              <div className="focus-card-header">
+                <div className="focus-recipe-name">
+                  {lang === 'bn' ? recipes[activeRecipeIndex].name_bn : recipes[activeRecipeIndex].name_en}
+                </div>
+                <button className="focus-close-btn" onClick={handleExitFocusMode} title={lang === 'bn' ? 'বন্ধ করুন' : 'Exit Focus Mode'}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Large Step Instruction */}
+              <div className="focus-step-body">
+                <div className="focus-step-number">{currentStepIndex + 1}</div>
+                <p className="focus-step-text">
+                  {currentRecipeSteps[currentStepIndex]}
+                </p>
+              </div>
+
+              {/* Active Timer Section */}
+              {timerSeconds !== null && (
+                <div className="focus-timer-section">
+                  <div className="focus-timer-display">
+                    <Clock size={20} className="timer-clock-icon" />
+                    <span>
+                      {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="focus-timer-controls">
+                    <button 
+                      className={`btn btn-sm ${timerActive ? 'btn-secondary' : 'btn-primary'}`} 
+                      onClick={() => setTimerActive(!timerActive)}
+                    >
+                      {timerActive ? <Pause size={14} /> : <Play size={14} />}
+                      {timerActive ? (lang === 'bn' ? 'থামান' : 'Pause') : (lang === 'bn' ? 'চালু' : 'Start')}
+                    </button>
+                    <button 
+                      className="btn btn-secondary btn-sm" 
+                      onClick={() => {
+                        const originalSecs = parseTimeLimit(currentRecipeSteps[currentStepIndex]);
+                        setTimerSeconds(originalSecs);
+                        setTimerActive(false);
+                      }}
+                    >
+                      <RotateCcw size={14} />
+                      {lang === 'bn' ? 'রিসেট' : 'Reset'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Voice and TTS control bar */}
+              <div className="focus-assistant-bar">
+                <button 
+                  className={`btn btn-sm voice-toggle-btn ${voiceCommandsActive ? 'listening' : ''}`}
+                  onClick={() => setVoiceCommandsActive(!voiceCommandsActive)}
+                >
+                  {voiceCommandsActive ? (
+                    <>
+                      <Mic size={16} className="mic-pulsing" />
+                      <span>{lang === 'bn' ? "ভয়েস কমান্ড সক্রিয়" : "Voice Commands: ON"}</span>
+                    </>
+                  ) : (
+                    <>
+                      <MicOff size={16} />
+                      <span>{lang === 'bn' ? "ভয়েস কমান্ড বন্ধ" : "Voice Commands: OFF"}</span>
+                    </>
+                  )}
+                </button>
+
+                {voiceCommandsActive && (
+                  <span className="voice-guide-hint">
+                    {lang === 'bn' ? "বলুন: 'পরের', 'আগের' বা 'আবার'" : "Speak: 'Next', 'Back', or 'Repeat'"}
+                  </span>
+                )}
+              </div>
+
+              {/* Bottom Nav Controls */}
+              <div className="focus-navigation-controls">
+                <button 
+                  className="btn btn-secondary focus-nav-btn" 
+                  onClick={handleFocusPrev}
+                  disabled={currentStepIndex === 0}
+                >
+                  <ChevronLeft size={20} />
+                  <span>{lang === 'bn' ? 'আগের' : 'Back'}</span>
+                </button>
+
+                <button 
+                  className="btn btn-secondary focus-nav-btn" 
+                  onClick={handleSpeakCurrentStep}
+                  title={lang === 'bn' ? 'ধাপটি শুনুন' : 'Speak current step'}
+                >
+                  <Volume2 size={20} />
+                  <span>{lang === 'bn' ? 'শুনুন' : 'Speak'}</span>
+                </button>
+
+                {currentStepIndex === currentRecipeSteps.length - 1 ? (
+                  <button 
+                    className="btn btn-primary focus-nav-btn finish-btn" 
+                    onClick={handleExitFocusMode}
+                  >
+                    <Check size={20} />
+                    <span>{lang === 'bn' ? 'সমাপ্ত' : 'Finish'}</span>
+                  </button>
+                ) : (
+                  <button 
+                    className="btn btn-primary focus-nav-btn" 
+                    onClick={handleFocusNext}
+                  >
+                    <span>{lang === 'bn' ? 'পরের' : 'Next'}</span>
+                    <ChevronRight size={20} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="global-toast-notification animate-slide-up">
+          <div className="toast-content">
+            <Check size={18} className="toast-icon" />
+            <span className="toast-text">{toastMessage}</span>
           </div>
         </div>
       )}
