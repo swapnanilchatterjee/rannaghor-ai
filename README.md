@@ -100,9 +100,3 @@ rannaghor-ai/
 | Fonts | Outfit, Noto Serif Bengali (Google Fonts) |
 | Hosting | Vercel (serverless functions + CDN) |
 | PWA | Service Worker + Web App Manifest |
-
----
-
-## 📄 License
-
-MIT © [Swapnanil Chatterjee](https://github.com/swapnanilchatterjee)
