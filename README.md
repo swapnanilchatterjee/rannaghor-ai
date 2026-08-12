@@ -1,15 +1,15 @@
 # 🍲 Rannaghor AI — রান্নাঘর AI
 
-**Rannaghor AI** (রান্নাঘর AI) is an AI-powered Bengali recipe suggester built for the home cook. Tell it what's in your kitchen — proteins, vegetables, spices — and it instantly recommends authentic Bengali dishes tailored to your taste, spice tolerance, and meal time.
+**Rannaghor AI** (রান্নাঘর AI) is an intelligent, AI-powered Bengali culinary companion built with **Python, FastAPI, LangChain, ChromaDB RAG (Retrieval-Augmented Generation), and React**. Tell it what's in your kitchen — proteins, vegetables, spices — and it instantly retrieves authentic Bengali dish knowledge and recommends tailored recipes using Groq's Llama 3.
 
-Built as a bilingual (Bengali + English) Progressive Web App using React + Groq's Llama 3, it works offline, speaks recipes aloud, supports hands-free voice navigation, and can be installed as a native app on any device.
-
-### 🌐 Live Demo
-👉 **[https://rannaghor-ai.vercel.app](https://rannaghor-ai.vercel.app)**
+Built as a bilingual (Bengali + English) Progressive Web App with a Python AI backend microservice, it works offline, speaks recipes aloud, supports hands-free voice navigation, and can be installed as a native app on any device.
 
 ---
 
 ## ✨ Features
+
+### 🧠 Python RAG & Vector Knowledge Engine (FastAPI + LangChain + ChromaDB)
+Powered by a high-performance Python FastAPI backend microservice. Integrates a **LangChain Retrieval-Augmented Generation (RAG)** pipeline using **ChromaDB** vector store to index authentic Bengali recipes (*Shorshe Ilish, Alu Posto, Dim Kosha, Chingri Malai Curry, Kosha Mangsho, Chholar Dal, Sukto*), performing semantic vector retrieval before calling Groq's Llama 3 (`llama-3.3-70b-versatile`).
 
 ### 🍳 Focus Mode with Smart Timers
 Step-by-step fullscreen cooking overlay with one instruction at a time. An automatic parser detects time mentions in steps (e.g. `"20 mins"`, `"৫ মিনিট"`) and creates live countdown timers. A programmatic chime fires via the browser's native `AudioContext` when a timer ends — no network assets required.
@@ -29,44 +29,47 @@ Missing an ingredient? Mark it, then copy the full list to your clipboard or sha
 ### 📱 PWA — Works Offline & Installable
 Service Workers cache the full app shell for instant loads and offline access. Installable as a standalone app on Android, iOS, and desktop.
 
-### 🤖 AI-Powered via Groq Llama 3
-Recipes are generated in real time through a secure serverless proxy using Groq's Llama 3 models with structured JSON output schemas. Falls back gracefully to a curated offline mock database (Shorshe Maach, Alu Posto, Dim Kosha, Musur Dal, Egg Roll, Alur Chop) when no API key is configured.
-
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- A free [Groq API Key](https://console.groq.com) *(optional — app works in demo mode without one)*
+- **Node.js 18+**
+- **Python 3.10+**
+- A free [Groq API Key](https://console.groq.com) *(optional — app includes a RAG fallback knowledge engine without one)*
 
 ### Local Setup
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/swapnanilchatterjee/rannaghor-ai.git
+# 1. Clone the repository
+git clone https://github.com/tapan2004/rannaghor-ai.git
 cd rannaghor-ai
 
-# 2. Install dependencies
+# 2. Install Node.js frontend dependencies
 npm install
 
-# 3. Start the development server
-npm run dev
+# 3. Install Python backend dependencies
+pip install -r backend/requirements.txt
 
-# 4. Build for production
-npm run build
+# 4. Start the Python FastAPI backend server (http://127.0.0.1:8000)
+npm run backend
+# OR: python backend/main.py
+
+# 5. In a new terminal, start the React frontend dev server (http://localhost:5173)
+npm run dev
 ```
 
 ---
 
-## 🔑 Connecting Your Groq API Key (Vercel)
+## 🔑 Environment Variables (.env)
 
-1. Open your project on **[Vercel Settings → Environment Variables](https://vercel.com/swapnanilchatterjees-projects/rannaghor-ai/settings/environment-variables)**
-2. Click **Add New Variable** and fill in:
-   - **Name:** `GROQ_API_KEY`
-   - **Value:** your key *(starts with `gsk_`)*
-   - **Environments:** `Production` + `Preview`
-3. Click **Save**, then trigger a **Redeploy**
+Create a `.env` or `backend/.env` file with your Groq API Key:
+
+```env
+GROQ_API_KEY=gsk_your_groq_api_key_here
+PORT=8000
+HOST=127.0.0.1
+```
 
 ---
 
@@ -74,17 +77,24 @@ npm run build
 
 ```
 rannaghor-ai/
-├── api/                    # Serverless proxy endpoints (suggest.js, chat.js)
-├── public/                 # PWA manifest & service worker (sw.js)
+├── backend/                  # Python FastAPI + LangChain + RAG Engine
+│   ├── data/
+│   │   └── bengali_recipes.json # Authentic recipe dataset for RAG vector indexing
+│   ├── main.py              # FastAPI server entry point (CORS, REST endpoints)
+│   ├── rag_engine.py        # LangChain & ChromaDB vector search + LLM pipeline
+│   ├── requirements.txt     # Python dependencies
+│   └── .env.example         # Environment template
+├── api/                      # Serverless proxy endpoints (suggest.js, chat.js)
+├── public/                   # PWA manifest & service worker (sw.js)
 └── src/
     ├── data/
-    │   └── ingredients.js  # Ingredient database with Bengali translations
+    │   └── ingredients.js    # Ingredient database with Bengali translations
     ├── utils/
-    │   └── recipeMock.js   # Offline mock recipes & scoring logic
-    ├── App.jsx             # Main app — all state, logic, and views
-    ├── App.css             # Full stylesheet — grid, dark mode, animations
-    ├── index.css           # Design tokens, typography, global resets
-    └── main.jsx            # React root + Service Worker registration
+    │   └── recipeMock.js     # Offline mock recipes & scoring logic
+    ├── App.jsx               # Main React app — all state, logic, and views
+    ├── App.css               # Full stylesheet — grid, dark mode, animations
+    ├── index.css             # Design tokens, typography, global resets
+    └── main.jsx              # React root + Service Worker registration
 ```
 
 ---
@@ -93,10 +103,10 @@ rannaghor-ai/
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18 + Vite |
-| Styling | Vanilla CSS with CSS custom properties |
-| AI | Groq API (Llama 3.3 70B) |
-| Icons | Lucide React |
-| Fonts | Outfit, Noto Serif Bengali (Google Fonts) |
-| Hosting | Vercel (serverless functions + CDN) |
-| PWA | Service Worker + Web App Manifest |
+| **Backend Framework** | Python 3.12 + FastAPI + Uvicorn |
+| **AI & RAG Engine** | LangChain, ChromaDB Vector Store, Groq (Llama 3.3 70B) |
+| **Frontend** | React 19 + Vite |
+| **Styling** | Vanilla CSS with CSS custom properties |
+| **Icons** | Lucide React |
+| **Fonts** | Outfit, Noto Serif Bengali (Google Fonts) |
+| **PWA** | Service Worker + Web App Manifest |
